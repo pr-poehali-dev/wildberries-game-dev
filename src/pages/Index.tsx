@@ -3,308 +3,314 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 
 const Index = () => {
-  const [currentOperation, setCurrentOperation] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState('profile');
   const [scanCode, setScanCode] = useState('');
-  const [operationCount, setOperationCount] = useState(0);
-  const [trainingMode, setTrainingMode] = useState(true);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [selectedPVZ, setSelectedPVZ] = useState('61440140');
+  const [workStatus, setWorkStatus] = useState('working');
+  const [currentDateTime] = useState('17.07.2025 20:16');
   
   const stats = {
-    processed: 47,
-    issued: 32,
-    returned: 8,
-    errors: 2
+    received: 0,
+    issued: 0,
+    returned: 0,
+    pending: 0,
+    defective: 0,
+    rejected: 0
   };
   
-  const mockOrders = [
-    { id: 'WB001234567', status: 'ready', customer: 'Иванов И.И.', items: 2, date: '15.07.2025' },
-    { id: 'WB001234568', status: 'processing', customer: 'Петрова А.С.', items: 1, date: '15.07.2025' },
-    { id: 'WB001234569', status: 'ready', customer: 'Сидоров П.П.', items: 3, date: '15.07.2025' }
+  const sidebarItems = [
+    { id: 'profile', label: 'Мой профиль', icon: 'User', active: true },
+    { id: 'goods', label: 'ТОВАРЫ', icon: 'Package', isSection: true },
+    { id: 'search', label: 'Поиск ШК', icon: 'Search' },
+    { id: 'issued', label: 'Выданные', icon: 'CheckCircle' },
+    { id: 'inventory', label: 'Инвентаризация', icon: 'ClipboardList' },
+    { id: 'analytics', label: 'АНАЛИТИКА И ФИНАНСЫ', icon: 'BarChart', isSection: true },
+    { id: 'stats', label: 'Статистика по коробкам и ШК', icon: 'BarChart3' },
+    { id: 'deliveries', label: 'Ближайшие поставки', icon: 'Truck' },
+    { id: 'reception', label: 'Статистика приемки', icon: 'Package2' },
+    { id: 'rating', label: 'Рейтинг', icon: 'Star' },
+    { id: 'dependent', label: 'Зависшие ШК', icon: 'AlertTriangle' },
+    { id: 'complaints', label: 'Подмены', icon: 'AlertCircle' },
+    { id: 'defects', label: 'Брак', icon: 'XCircle' }
   ];
-  
-  const startOperation = (operation: string) => {
-    setCurrentOperation(operation);
-    setScanCode('');
-    setSelectedItem(null);
-  };
   
   const handleScan = () => {
     if (scanCode.trim()) {
-      setOperationCount(prev => prev + 1);
+      alert(`Отсканирован код: ${scanCode}`);
       setScanCode('');
-      
-      // Simulate finding an item
-      const mockItem = {
-        code: scanCode,
-        name: 'Товар ' + scanCode.slice(-4),
-        status: currentOperation === 'receive' ? 'received' : currentOperation === 'issue' ? 'issued' : 'returned'
-      };
-      setSelectedItem(mockItem);
-      
-      setTimeout(() => {
-        setSelectedItem(null);
-      }, 2000);
     }
   };
   
-  const resetOperation = () => {
-    setCurrentOperation(null);
-    setScanCode('');
-    setSelectedItem(null);
+  const renderMainContent = () => {
+    switch (activeSection) {
+      case 'profile':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Мой профиль</h2>
+              <div className="space-y-2">
+                <p className="text-gray-600">Гелазутдинов Виктор Гелазутдинович</p>
+                <p className="text-gray-600">Ринатович</p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Мои успехи */}
+              <Card className="bg-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-purple-600 flex items-center">
+                    <Icon name="ChevronDown" className="h-4 w-4 mr-2" />
+                    Мои успехи
+                  </CardTitle>
+                  <p className="text-xs text-gray-500">За сегодня</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-4">ЭФФЕКТИВНОСТЬ</p>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-xs text-gray-500">Принято</p>
+                        <p className="text-lg font-semibold">{stats.received}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Выдано</p>
+                        <p className="text-lg font-semibold">{stats.issued}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Возврат</p>
+                        <p className="text-lg font-semibold">{stats.returned}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-gray-500 mb-2">НАЙТИ И ВЕРНУТЬ</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Завершить ШК к удержанию</span>
+                        <span>{stats.pending}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Вернуть на склад</span>
+                        <span>{stats.returned}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-gray-500 mb-2">УДЕРЖАНИЯ</p>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>За что</span>
+                        <span>Кол-во, шт</span>
+                        <span>Сумма</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Неоспоренные товары</span>
+                        <span>{stats.defective}</span>
+                        <span>{stats.defective}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Подмены</span>
+                        <span>{stats.rejected}</span>
+                        <span>{stats.rejected}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Брак</span>
+                        <span>{stats.defective}</span>
+                        <span>{stats.defective}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Рабочий профиль */}
+              <Card className="bg-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-purple-600 flex items-center">
+                    <Icon name="ChevronDown" className="h-4 w-4 mr-2" />
+                    Рабочий профиль
+                  </CardTitle>
+                  <p className="text-xs text-gray-500">ID: {selectedPVZ}</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Мой активный ПВЗ #-</p>
+                    <p className="text-sm text-green-600 font-medium">Неизвестен</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Мой рабочий статус</p>
+                    <p className="text-sm text-green-600 font-medium">Работаю</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Сейчас я на рабочем месте</p>
+                    <p className="text-sm text-green-600 font-medium">Нет</p>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-gray-500 mb-2">ВСЕ ПВЗ, ГДЕ Я РАБОТАЮ</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-mono">#</span>
+                      <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                        <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Уведомления */}
+              <Card className="bg-white">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-purple-600 flex items-center">
+                    <Icon name="ChevronDown" className="h-4 w-4 mr-2" />
+                    Уведомления
+                  </CardTitle>
+                  <p className="text-xs text-gray-500">Чтобы ничего не пропустить</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-500">Загрузка всех списков</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Личный профиль */}
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-purple-600 flex items-center">
+                  <Icon name="ChevronUp" className="h-4 w-4 mr-2" />
+                  Личный профиль
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
+        );
+      
+      case 'search':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Поиск ШК</h2>
+              <div className="flex space-x-4">
+                <Input
+                  placeholder="Введите или отсканируйте штрихкод"
+                  value={scanCode}
+                  onChange={(e) => setScanCode(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleScan()}
+                  className="flex-1"
+                />
+                <Button onClick={handleScan} className="bg-purple-600 hover:bg-purple-700">
+                  <Icon name="Search" className="h-4 w-4 mr-2" />
+                  Поиск
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">{activeSection}</h2>
+              <p className="text-gray-600">Раздел в разработке</p>
+            </div>
+          </div>
+        );
+    }
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-6">
-        <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
-              <Icon name="Package" className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">WB Point Simulator</h1>
-              <p className="text-sm text-gray-500">Обучающий режим для новых сотрудников</p>
-            </div>
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-lg border-r border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-2 mb-2">
+            <Icon name="Menu" className="h-5 w-5 text-purple-600" />
+            <Select value={selectedPVZ} onValueChange={setSelectedPVZ}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Выберите ПВЗ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="61440140">Выберите ПВЗ</SelectItem>
+              </SelectContent>
+            </Select>
+            <Icon name="BarChart" className="h-5 w-5 text-gray-400" />
           </div>
-          <div className="flex items-center space-x-4">
-            <Badge variant={trainingMode ? "default" : "secondary"} className="bg-green-100 text-green-800">
-              <Icon name="GraduationCap" className="h-4 w-4 mr-1" />
-              Обучение
-            </Badge>
-            <Badge variant="outline" className="text-gray-600">
-              <Icon name="Clock" className="h-4 w-4 mr-1" />
-              Смена: 09:00 - 18:00
-            </Badge>
+          <div className="text-xs text-gray-500">
+            <div>Рейтинг</div>
+            <div>ID ПВЗ: 0</div>
+            <div>Сотрудник: {selectedPVZ}</div>
           </div>
         </div>
-      </div>
-      
-      {/* Stats Dashboard */}
-      <div className="max-w-6xl mx-auto mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Обработано</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.processed}</p>
+        
+        <nav className="p-2">
+          {sidebarItems.map((item) => (
+            <div key={item.id}>
+              {item.isSection ? (
+                <div className="px-3 py-2 text-xs font-semibold text-purple-600 uppercase tracking-wider">
+                  {item.label}
                 </div>
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Icon name="Package" className="h-5 w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Выдано</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.issued}</p>
-                </div>
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <Icon name="CheckCircle" className="h-5 w-5 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Возвращено</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.returned}</p>
-                </div>
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Icon name="RotateCcw" className="h-5 w-5 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Ошибки</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.errors}</p>
-                </div>
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <Icon name="AlertCircle" className="h-5 w-5 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              ) : (
+                <button
+                  onClick={() => setActiveSection(item.id)}
+                  className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
+                    activeSection === item.id
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon name={item.icon} className="h-4 w-4 mr-3" />
+                  {item.label}
+                </button>
+              )}
+            </div>
+          ))}
+        </nav>
       </div>
       
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Operations Panel */}
-        <Card className="bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Icon name="Zap" className="h-5 w-5 text-purple-600" />
-              <span>Операции</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!currentOperation ? (
-              <div className="grid grid-cols-1 gap-3">
-                <Button 
-                  className="h-16 text-left justify-start bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-200"
-                  onClick={() => startOperation('receive')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon name="Package" className="h-6 w-6" />
-                    <div>
-                      <p className="font-semibold">Прием товара</p>
-                      <p className="text-sm opacity-75">Получение и размещение заказов</p>
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  className="h-16 text-left justify-start bg-green-50 hover:bg-green-100 text-green-700 border-2 border-green-200"
-                  onClick={() => startOperation('issue')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon name="HandHeart" className="h-6 w-6" />
-                    <div>
-                      <p className="font-semibold">Выдача товара</p>
-                      <p className="text-sm opacity-75">Выдача заказов клиентам</p>
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button 
-                  className="h-16 text-left justify-start bg-orange-50 hover:bg-orange-100 text-orange-700 border-2 border-orange-200"
-                  onClick={() => startOperation('return')}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon name="RotateCcw" className="h-6 w-6" />
-                    <div>
-                      <p className="font-semibold">Возврат товара</p>
-                      <p className="text-sm opacity-75">Обработка возвратов</p>
-                    </div>
-                  </div>
-                </Button>
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="bg-purple-600 text-white px-6 py-2 rounded-full text-sm font-medium">
+                Не забывайте о курьерских заказах
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {currentOperation === 'receive' && 'Прием товара'}
-                    {currentOperation === 'issue' && 'Выдача товара'}
-                    {currentOperation === 'return' && 'Возврат товара'}
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={resetOperation}>
-                    <Icon name="X" className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Input
-                    placeholder="Отсканируйте или введите код"
-                    value={scanCode}
-                    onChange={(e) => setScanCode(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleScan()}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleScan} disabled={!scanCode.trim()}>
-                    <Icon name="Scan" className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {selectedItem && (
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center space-x-2">
-                      <Icon name="CheckCircle" className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="font-semibold text-green-800">Операция выполнена</p>
-                        <p className="text-sm text-green-600">{selectedItem.name} - {selectedItem.status}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="text-center text-sm text-gray-500">
-                  Операций выполнено: {operationCount}
-                </div>
+              <div className="text-sm text-gray-600">
+                в ПВЗ может прийти курьер — выдайте ему клиентский заказ в пакет
               </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Orders List */}
-        <Card className="bg-white">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Icon name="List" className="h-5 w-5 text-purple-600" />
-              <span>Заказы на выдачу</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {mockOrders.map((order) => (
-                <div key={order.id} className="p-3 border rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <p className="font-semibold text-gray-900">{order.id}</p>
-                        <Badge 
-                          variant={order.status === 'ready' ? 'default' : 'secondary'}
-                          className={order.status === 'ready' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}
-                        >
-                          {order.status === 'ready' ? 'Готов' : 'В обработке'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">{order.customer}</p>
-                      <p className="text-xs text-gray-500">{order.items} товара • {order.date}</p>
-                    </div>
-                    <Icon name="ChevronRight" className="h-5 w-5 text-gray-400" />
-                  </div>
-                </div>
-              ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Training Progress */}
-      {trainingMode && (
-        <div className="max-w-6xl mx-auto mt-6">
-          <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-                  <Icon name="GraduationCap" className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Прогресс обучения</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Основы работы с ПВЗ</span>
-                      <span className="text-purple-600">85%</span>
-                    </div>
-                    <Progress value={85} className="h-2" />
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Отличная работа! Продолжайте выполнять операции для завершения обучения.
-                  </p>
-                </div>
+            <div className="flex items-center space-x-4">
+              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                NEW
+              </Badge>
+              <Icon name="Bell" className="h-5 w-5 text-gray-400" />
+              <div className="text-sm text-gray-600">
+                {currentDateTime}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <div className="text-sm text-gray-600">
+                v9.7.314
+              </div>
+            </div>
+          </div>
+        </header>
+        
+        {/* Page Content */}
+        <main className="flex-1 p-6">
+          {renderMainContent()}
+        </main>
+      </div>
     </div>
   );
 };
