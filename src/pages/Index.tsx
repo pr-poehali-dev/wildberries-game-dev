@@ -1,25 +1,127 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { toast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
+
+interface Order {
+  id: string;
+  customer: string;
+  items: number;
+  status: 'ready' | 'processing' | 'issued' | 'returned';
+  date: string;
+  phone: string;
+  totalAmount: number;
+  itemList: string[];
+}
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('profile');
   const [scanCode, setScanCode] = useState('');
   const [selectedPVZ, setSelectedPVZ] = useState('61440140');
   const [workStatus, setWorkStatus] = useState('working');
-  const [currentDateTime] = useState('17.07.2025 20:16');
+  const [currentDateTime, setCurrentDateTime] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [foundOrder, setFoundOrder] = useState<Order | null>(null);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
   
-  const stats = {
+  const [stats, setStats] = useState({
     received: 0,
     issued: 0,
     returned: 0,
     pending: 0,
     defective: 0,
     rejected: 0
+  });
+  
+  const [orders, setOrders] = useState<Order[]>([
+    {
+      id: 'WB7654321',
+      customer: 'Иванов Иван Иванович',
+      items: 2,
+      status: 'ready',
+      date: '17.07.2025',
+      phone: '+7(999)123-45-67',
+      totalAmount: 2850,
+      itemList: ['Футболка мужская', 'Джинсы классические']
+    },
+    {
+      id: 'WB7654322',
+      customer: 'Петрова Анна Сергеевна',
+      items: 1,
+      status: 'ready',
+      date: '17.07.2025',
+      phone: '+7(999)876-54-32',
+      totalAmount: 1250,
+      itemList: ['Платье летнее']
+    },
+    {
+      id: 'WB7654323',
+      customer: 'Сидоров Петр Петрович',
+      items: 3,
+      status: 'processing',
+      date: '17.07.2025',
+      phone: '+7(999)555-33-22',
+      totalAmount: 4200,
+      itemList: ['Кроссовки спортивные', 'Рюкзак', 'Кепка']
+    },
+    {
+      id: 'WB7654324',
+      customer: 'Козлова Мария Александровна',
+      items: 1,
+      status: 'ready',
+      date: '17.07.2025',
+      phone: '+7(999)111-22-33',
+      totalAmount: 890,
+      itemList: ['Сумка женская']
+    },
+    {
+      id: 'WB7654325',
+      customer: 'Николаев Дмитрий Викторович',
+      items: 2,
+      status: 'ready',
+      date: '17.07.2025',
+      phone: '+7(999)444-55-66',
+      totalAmount: 3150,
+      itemList: ['Куртка зимняя', 'Шарф']
+    }
+  ]);
+  
+  // Update current date/time
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const formatted = now.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      setCurrentDateTime(formatted);
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Load stats from localStorage
+  useEffect(() => {
+    const savedStats = localStorage.getItem('wb-stats');
+    if (savedStats) {
+      setStats(JSON.parse(savedStats));
+    }
+  }, []);
+  
+  // Save stats to localStorage
+  const updateStats = (newStats: typeof stats) => {
+    setStats(newStats);
+    localStorage.setItem('wb-stats', JSON.stringify(newStats));
   };
   
   const sidebarItems = [
@@ -39,10 +141,116 @@ const Index = () => {
   ];
   
   const handleScan = () => {
-    if (scanCode.trim()) {
-      alert(`Отсканирован код: ${scanCode}`);
+    if (!scanCode.trim()) return;
+    
+    setIsScanning(true);
+    
+    // Simulate scanning delay
+    setTimeout(() => {
+      const order = orders.find(o => o.id === scanCode.trim());
+      
+      if (order) {
+        setFoundOrder(order);
+        setShowOrderDialog(true);
+        toast({
+          title: "Заказ найден!",
+          description: `Заказ ${order.id} для ${order.customer}`,
+        });
+      } else {
+        toast({
+          title: "Заказ не найден",
+          description: "Проверьте правильность введенного кода",
+          variant: "destructive"
+        });
+      }
+      
+      setIsScanning(false);
       setScanCode('');
-    }
+    }, 1000);
+  };
+  
+  const handleIssueOrder = () => {
+    if (!foundOrder) return;
+    
+    const updatedOrders = orders.map(order => 
+      order.id === foundOrder.id 
+        ? { ...order, status: 'issued' as const }
+        : order
+    );
+    
+    setOrders(updatedOrders);
+    
+    const newStats = {
+      ...stats,
+      issued: stats.issued + 1,
+      pending: Math.max(0, stats.pending - 1)
+    };
+    updateStats(newStats);
+    
+    toast({
+      title: "Заказ выдан!",
+      description: `Заказ ${foundOrder.id} успешно выдан клиенту`,
+    });
+    
+    setShowOrderDialog(false);
+    setFoundOrder(null);
+  };
+  
+  const handleReturnOrder = () => {
+    if (!foundOrder) return;
+    
+    const updatedOrders = orders.map(order => 
+      order.id === foundOrder.id 
+        ? { ...order, status: 'returned' as const }
+        : order
+    );
+    
+    setOrders(updatedOrders);
+    
+    const newStats = {
+      ...stats,
+      returned: stats.returned + 1
+    };
+    updateStats(newStats);
+    
+    toast({
+      title: "Заказ возвращен!",
+      description: `Заказ ${foundOrder.id} отправлен на возврат`,
+    });
+    
+    setShowOrderDialog(false);
+    setFoundOrder(null);
+  };
+  
+  const handleReceiveOrder = () => {
+    const newStats = {
+      ...stats,
+      received: stats.received + 1,
+      pending: stats.pending + 1
+    };
+    updateStats(newStats);
+    
+    toast({
+      title: "Товар принят!",
+      description: "Товар успешно принят на склад",
+    });
+  };
+  
+  const resetStats = () => {
+    const resetStats = {
+      received: 0,
+      issued: 0,
+      returned: 0,
+      pending: 0,
+      defective: 0,
+      rejected: 0
+    };
+    updateStats(resetStats);
+    
+    toast({
+      title: "Статистика сброшена",
+      description: "Все счетчики обнулены",
+    });
   };
   
   const renderMainContent = () => {
@@ -141,17 +349,19 @@ const Index = () => {
                 <CardContent className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Мой активный ПВЗ #-</p>
-                    <p className="text-sm text-green-600 font-medium">Неизвестен</p>
+                    <p className="text-sm text-green-600 font-medium">ПВЗ {selectedPVZ}</p>
                   </div>
                   
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Мой рабочий статус</p>
-                    <p className="text-sm text-green-600 font-medium">Работаю</p>
+                    <p className="text-sm text-green-600 font-medium">
+                      {workStatus === 'working' ? 'Работаю' : 'Не работаю'}
+                    </p>
                   </div>
                   
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Сейчас я на рабочем месте</p>
-                    <p className="text-sm text-green-600 font-medium">Нет</p>
+                    <p className="text-sm text-green-600 font-medium">Да</p>
                   </div>
                   
                   <div className="border-t pt-4">
@@ -200,18 +410,106 @@ const Index = () => {
           <div className="space-y-6">
             <div className="bg-white rounded-lg p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900">Поиск ШК</h2>
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 mb-6">
                 <Input
-                  placeholder="Введите или отсканируйте штрихкод"
+                  placeholder="Введите или отсканируйте штрихкод (например: WB7654321)"
                   value={scanCode}
                   onChange={(e) => setScanCode(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleScan()}
                   className="flex-1"
+                  disabled={isScanning}
                 />
-                <Button onClick={handleScan} className="bg-purple-600 hover:bg-purple-700">
-                  <Icon name="Search" className="h-4 w-4 mr-2" />
-                  Поиск
+                <Button 
+                  onClick={handleScan} 
+                  disabled={!scanCode.trim() || isScanning}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {isScanning ? (
+                    <Icon name="Loader2" className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Icon name="Search" className="h-4 w-4 mr-2" />
+                  )}
+                  {isScanning ? 'Поиск...' : 'Поиск'}
                 </Button>
+              </div>
+              
+              {/* Quick Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button
+                  onClick={handleReceiveOrder}
+                  className="h-20 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-200"
+                >
+                  <div className="flex flex-col items-center">
+                    <Icon name="Package" className="h-6 w-6 mb-2" />
+                    <span className="font-semibold">Принять товар</span>
+                  </div>
+                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button className="h-20 bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200">
+                      <div className="flex flex-col items-center">
+                        <Icon name="RotateCcw" className="h-6 w-6 mb-2" />
+                        <span className="font-semibold">Сбросить статистику</span>
+                      </div>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Сброс статистики</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Вы уверены, что хотите сбросить всю статистику? Это действие нельзя отменить.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogAction onClick={resetStats}>
+                        Сбросить
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                
+                <Button 
+                  onClick={() => setActiveSection('issued')}
+                  className="h-20 bg-green-50 hover:bg-green-100 text-green-700 border-2 border-green-200"
+                >
+                  <div className="flex flex-col items-center">
+                    <Icon name="List" className="h-6 w-6 mb-2" />
+                    <span className="font-semibold">Выданные заказы</span>
+                  </div>
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      
+      case 'issued':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Выданные заказы</h2>
+              <div className="space-y-4">
+                {orders.filter(order => order.status === 'issued').length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">Нет выданных заказов</p>
+                ) : (
+                  orders.filter(order => order.status === 'issued').map(order => (
+                    <div key={order.id} className="border rounded-lg p-4 bg-green-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900">{order.id}</p>
+                          <p className="text-sm text-gray-600">{order.customer}</p>
+                          <p className="text-sm text-gray-500">{order.phone}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge className="bg-green-100 text-green-800 mb-2">
+                            Выдан
+                          </Badge>
+                          <p className="text-sm text-gray-600">{order.date}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -311,6 +609,72 @@ const Index = () => {
           {renderMainContent()}
         </main>
       </div>
+      {/* Order Dialog */}
+      <AlertDialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Найден заказ {foundOrder?.id}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Клиент:</p>
+                    <p className="text-sm text-gray-600">{foundOrder?.customer}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Телефон:</p>
+                    <p className="text-sm text-gray-600">{foundOrder?.phone}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Товары ({foundOrder?.items} шт.):</p>
+                  <div className="space-y-1">
+                    {foundOrder?.itemList.map((item, index) => (
+                      <p key={index} className="text-sm text-gray-600">• {item}</p>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Сумма:</p>
+                    <p className="text-sm text-gray-600">{foundOrder?.totalAmount} ₽</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">Дата:</p>
+                    <p className="text-sm text-gray-600">{foundOrder?.date}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Статус:</p>
+                  <Badge className={foundOrder?.status === 'ready' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                    {foundOrder?.status === 'ready' ? 'Готов к выдаче' : 'В обработке'}
+                  </Badge>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={handleReturnOrder}
+              className="text-orange-600 border-orange-600 hover:bg-orange-50"
+            >
+              <Icon name="RotateCcw" className="h-4 w-4 mr-2" />
+              Возврат
+            </Button>
+            <AlertDialogAction
+              onClick={handleIssueOrder}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Icon name="CheckCircle" className="h-4 w-4 mr-2" />
+              Выдать заказ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
